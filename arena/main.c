@@ -35,7 +35,8 @@ mem_arena* arena_create(u64 capacity);
 void arena_destroy(mem_arena* arena);
 void* arena_push(mem_arena* arena, u64 size, b32 non_zero);
 void arena_pop(mem_arena* arena, u64 size);
-void arena_pop_to(mem_arena* arena, u64 pos);
+void arena_pop_to(mem_arena* arena, u64 new_pos);
+u64 arena_available(mem_arena* arena);
 void arena_clear(mem_arena* arena);
 
 #define PUSH_STRUCT(arena, T) (T*)arena_push((arena), sizeof(T), false)
@@ -45,12 +46,19 @@ void arena_clear(mem_arena* arena);
 
 
 int main(void) {
-    mem_arena* perm_arena = arena_create(MiB(1));
+    mem_arena* perm_arena = arena_create(KiB(1));
 
-    arena_push(perm_arena, KiB(16), true);
+    i64* new_array = PUSH_ARRAY(perm_arena, i64, 100);
 
-    printf("Arena Pointer: %d\n", (i32)perm_arena->pos);
-    printf("Arena capacity: %d\n", (i32)perm_arena->capacity);
+    for (int i = 0; i < 100; i++) {
+        new_array[i] = i;
+    }
+
+    for (int i = 0; i < 100; i++) {
+        printf("Element %d, value %ld\n", i, new_array[i]);
+    }
+
+    printf("Availavle space in arena: %lu\n", arena_available(perm_arena));
 
     arena_destroy(perm_arena);
 
@@ -64,6 +72,7 @@ mem_arena* arena_create(u64 capacity) {
     arena->capacity = capacity;
     arena->pos = ARENA_BASE_POS;
 
+    printf("New %lu byte arena was created.\n", capacity);
     return arena;
 }
 
@@ -72,9 +81,6 @@ void arena_destroy(mem_arena* arena) {
 }
 
 void* arena_push(mem_arena* arena, u64 size, b32 non_zero) {
-    // return pointer to the current pos
-    // increment pos
-    // then return pointer to the next pos
     u64 pos_aligned = ALIGN_UP_POW2(arena->pos, ARENA_ALIGN);
     u64 new_pos = pos_aligned + size;
 
@@ -86,19 +92,29 @@ void* arena_push(mem_arena* arena, u64 size, b32 non_zero) {
 
     if (!non_zero) {
         memset(out, 0, size);
+        printf("Newly pushed memory in arena was zeroed.\n");
     }
 
+    printf("Pushed %lu bytes onto the arena.\n", size);
     return out;
 }
 
 void arena_pop(mem_arena* arena, u64 size) {
-    size = MIN(size, arena->pos - ARENA_BASE_POS);
+    if (size > arena->pos - ARENA_BASE_POS) {
+        size = arena->pos - ARENA_BASE_POS;
+        printf("Whole arena is cleared\n");
+    }
+    printf("Popped %lu bytes.\n", size);
     arena->pos -= size;
 }
 
-void arena_pop_to(mem_arena* arena, u64 pos) {
-    u64 size = pos < arena->pos ? arena->pos - pos : 0;
+void arena_pop_to(mem_arena* arena, u64 new_pos) {
+    u64 size = new_pos < arena->pos ? arena->pos - new_pos : 0;
     arena_pop(arena, size);
+}
+
+u64 arena_available(mem_arena* arena) {
+    return arena->capacity - arena->pos;
 }
 
 void arena_clear(mem_arena* arena) {
