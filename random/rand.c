@@ -1,47 +1,11 @@
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <math.h>
-#include <time.h>
-
 // Based on pcg random number generator (https://www.pcg-random.org)
 // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
 
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef float f32;
+// This code was adapted from a video of "Magicalbat" YouTube channel
+// Video URL: https://youtu.be/jgiMagdjA1s
+// Original GitHub repo: "https://github.com/Magicalbat/videos/blob/main/rand.c"
 
-#define PI 3.141592653589793238
-
-typedef struct {
-    u64 state;
-    u64 inc;
-    f32 prev_norm;
-} prng_state;
-
-void prng_seed_r(prng_state* rng, u64 initstate, u64 initseq);
-void prng_seed(u64 initstate, u64 initseq);
-
-u32 prng_rand_r(prng_state* rng);
-u32 prng_rand(void);
-
-f32 prng_randf_r(prng_state* rng);
-f32 prng_randf(void);
-
-f32 prng_rand_norm_r(prng_state* rng);
-f32 prng_rand_norm(void);
-
-
-int main(void) {
-    u64 seed = (u64)time(NULL);
-    prng_seed(seed, seed ^ 0xdeadbeefULL);
-
-    for (u32 i = 0; i < 10; i++) {
-        printf("%f\n", prng_rand_norm());
-    }
-
-    return 0;
-}
+#include "rand.h"
 
 static prng_state s_prng_state = {
     0x853c49e6748fea9bULL, 0xda3e39cb94b95bdbULL,
