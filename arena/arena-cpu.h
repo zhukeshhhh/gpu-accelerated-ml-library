@@ -2,9 +2,7 @@
 // Video URL: "https://youtu.be/jgiMagdjA1s"
 // Original GitHub repo: "https://github.com/Magicalbat/videos/blob/main/arena.c"
 
-#ifndef ARENA_CPU_H
-#define ARENA_CPU_H
-
+#pragma once
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -44,7 +42,6 @@ typedef i32 b32;
 typedef struct {
     u64 reserve_size;
     u64 commit_size;
-
     u64 pos;
     u64 commit_pos;
 } mem_arena;
@@ -70,6 +67,4 @@ b32 plat_mem_release(void* ptr, u64 size);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

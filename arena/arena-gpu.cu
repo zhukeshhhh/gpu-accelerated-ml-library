@@ -1,14 +1,13 @@
-#include "arena-cuda.h"
+#include "arena-gpu.h"
 #include <stdlib.h>
 #include <stdio.h>
 
-int main() {
-    printf("Enter\n");
-    cuda_arena_create(GiB(1));
+b32 cuda_available() {
+    i32 count = 0;
+    cudaError_t error = cudaGetDeviceCount(&count);
 
-    for(;;) {}
-
-    return 0;
+    if (count == 0 || error != cudaSuccess) { return 0; }
+    return 1;
 }
 
 cuda_arena* cuda_arena_create(u64 size) {

@@ -1,5 +1,4 @@
-#ifndef ARENA_CUDA_H
-#define ARENA_CUDA_H
+#pragma once
 
 #include <stdint.h>
 #include <cuda_runtime.h>
@@ -33,6 +32,8 @@ typedef struct {
     u64 offset;
 } cuda_arena;
 
+b32 cuda_available();
+
 cuda_arena* cuda_arena_create(u64 size);
 void cuda_arena_destroy(cuda_arena* arena);
 void* cuda_arena_push(cuda_arena* arena, u64 size);
@@ -40,13 +41,11 @@ void cuda_arena_pop(cuda_arena* arena, u64 size);
 void cuda_arena_pop_to(cuda_arena* arena, u64 new_pos);
 void cuda_arena_clear(cuda_arena* arena);
 
-#define PUSH_STRUCT(arena, T) (T*)cuda_arena_push((arena), sizeof(T), false)
-#define PUSH_STRUCT_NZ(arena, T) (T*)cuda_arena_push((arena), sizeof(T), true)
-#define PUSH_ARRAY(arena, T, n) (T*)cuda_arena_push((arena), sizeof(T) * (n), false)
-#define PUSH_ARRAY_NZ(arena, T, n) (T*)cuda_arena_push((arena), sizeof(T) * (n), true)
+#define CUDA_PUSH_STRUCT(arena, T) (T*)cuda_arena_push((arena), sizeof(T), false)
+#define CUDA_PUSH_STRUCT_NZ(arena, T) (T*)cuda_arena_push((arena), sizeof(T), true)
+#define CUDA_PUSH_ARRAY(arena, T, n) (T*)cuda_arena_push((arena), sizeof(T) * (n), false)
+#define CUDA_PUSH_ARRAY_NZ(arena, T, n) (T*)cuda_arena_push((arena), sizeof(T) * (n), true)
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif
