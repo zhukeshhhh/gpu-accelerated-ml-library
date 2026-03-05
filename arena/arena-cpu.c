@@ -2,7 +2,7 @@
 // Video URL: "https://youtu.be/jgiMagdjA1s"
 // Original GitHub repo: "https://github.com/Magicalbat/videos/blob/main/arena.c"
 
-#include "arena.h"
+#include "arena-cpu.h"
 
 mem_arena* arena_create(u64 reserve_size, u64 commit_size) {
     u32 pagesize = plat_get_pagesize();

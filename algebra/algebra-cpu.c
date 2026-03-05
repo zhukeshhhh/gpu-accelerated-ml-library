@@ -3,7 +3,7 @@
 // Original GitHub repo: "https://github.com/Magicalbat/videos/tree/main/machine-learning"
 
 #include "algebra.h"
-#include "../arena/arena.h"
+#include "../arena/arena-cpu.h"
 
 int main(void) {
     printf("HELLO WORLD!\n");
@@ -21,8 +21,6 @@ int main(void) {
     mat_fill(c, 0);
 
     b8 result = mat_mul(c, a, b, false, false, false);
-
-
     
     if (result == true){printf("Matmul Success!\n");}
     else if (result == false) {printf("Matmul Filed!\n");}
@@ -212,9 +210,46 @@ b32 mat_mul(
     return true;
 }
 
-b32 mat_relu(matrix* out, const matrix* in);
-b32 mat_softmax(matrix* out, const matrix* in);
-b32 mat_cross_entropy(matrix* out, const matrix* p, const matrix* q);
+b32 mat_relu(matrix* out, const matrix* in) {
+    if (out->rows != in->rows || out->cols != in->cols) {
+        return false;
+    }
+
+    u64 size = mat_elemnum(out);
+    for (u64 i = 0; i < size; i++) {
+        out->data[i] = MAX(0, in->data[i]);
+    }
+
+    return true;
+}
+
+b32 mat_softmax(matrix* out, const matrix* in) {
+    if (out->rows != in->rows || out->cols != in->cols) {
+        return false;
+    }
+
+    u64 size = mat_elemnum(out);
+    f32 exp_sum = 0.0f;
+    for (u64 i = 0; i < size; i++) {
+        exp_sum += expf(in->data[i]);
+    }
+
+    mat_scale(out, 1.0f / exp_sum);
+
+    return true;
+}
+
+b32 mat_cross_entropy(matrix* out, const matrix* p, const matrix* q) {
+    if (p->cols != q->cols || q->rows != p-> rows) { return false; }
+    if (out->cols != p->cols || out->rows != p->cols) { return false; }
+
+    u64 size = mat_elemnum(out);
+    for (u64 i = 0; i < size; i++) {
+        if (p->data[i] == 0.0f) { out->data[i] = 0.0f; }
+        else { out->data[i] = p->data[i] * -logf(q->data[i]); }
+    }
+}
+
 b32 mat_relu_add_grad(matrix* out, const matrix* in);
 b32 mat_softmax_add_grad(matrix* out, const matrix* softmax_out);
 b32 mat_cross_entropy_add_grad(matrix* out, const matrix* p, const matrix* q);

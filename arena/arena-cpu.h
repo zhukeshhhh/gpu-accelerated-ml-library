@@ -2,8 +2,8 @@
 // Video URL: "https://youtu.be/jgiMagdjA1s"
 // Original GitHub repo: "https://github.com/Magicalbat/videos/blob/main/arena.c"
 
-#ifndef ARENA_H
-#define ARENA_H
+#ifndef ARENA_CPU_H
+#define ARENA_CPU_H
 
 #define _GNU_SOURCE
 
@@ -63,7 +63,6 @@ void arena_clear(mem_arena* arena);
 #define PUSH_ARRAY_NZ(arena, T, n) (T*)arena_push((arena), sizeof(T) * (n), true)
 
 u32 plat_get_pagesize(void);
-
 void* plat_mem_reserve(u64 size);
 b32 plat_mem_commit(void* ptr, u64 size);
 b32 plat_mem_decommit(void* ptr, u64 size);
