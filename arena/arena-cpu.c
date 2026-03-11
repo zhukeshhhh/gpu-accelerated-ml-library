@@ -1,108 +1,45 @@
 // This code was adapted from a video of "Magicalbat" YouTube channel
 // Video URL: "https://youtu.be/jgiMagdjA1s"
 // Original GitHub repo: "https://github.com/Magicalbat/videos/blob/main/arena.c"
-
+#pragma once
 #include "arena-cpu.h"
 
-mem_arena* arena_create(u64 reserve_size, u64 commit_size) {
-    u32 pagesize = plat_get_pagesize();
-
-    reserve_size = ALIGN_UP_POW2(reserve_size, pagesize);
-    commit_size = ALIGN_UP_POW2(commit_size, pagesize);
-
-    mem_arena* arena = plat_mem_reserve(reserve_size);
-
-    if (!plat_mem_commit(arena, commit_size)) {
-        return NULL;
-    }
-
-    arena->reserve_size = reserve_size;
-    arena->commit_size = commit_size;
-    arena->pos = ARENA_BASE_POS;
-    arena->commit_pos = commit_size;
+cpu_arena* cpu_arena_create(u64 capacity) {
+    cpu_arena* arena = (cpu_arena*)malloc(capacity);
+    arena->pos = CPU_ARENA_BASE_POS;
 
     return arena;
 }
 
-void arena_destroy(mem_arena* arena) {
-    plat_mem_release(arena, arena->reserve_size);
+void cpu_arena_destroy(cpu_arena* arena) {
+    free(arena);
 }
 
-void* arena_push(mem_arena* arena, u64 size, b32 non_zero) {
-    u64 pos_aligned = ALIGN_UP_POW2(arena->pos, ARENA_ALIGN);
-    u64 new_pos = pos_aligned + size;
+void* cpu_arena_push(cpu_arena* arena, u64 size) {
+    u64 aligned_pos = CPU_ALIGN_UP(arena->pos, CPU_ARENA_ALIGN);
+    u64 new_pos = aligned_pos + size;
 
-    if (new_pos > arena->reserve_size) { return NULL; }
-
-    if (new_pos > arena->commit_pos) {
-        u64 new_commit_pos = new_pos;
-        new_commit_pos += arena->commit_size - 1;
-        new_commit_pos -= new_commit_pos % arena->commit_size;
-        new_commit_pos = MIN(new_commit_pos, arena->reserve_size);
-
-        u8* mem = (u8*)arena + arena->commit_pos;
-        u64 commit_size = new_commit_pos - arena->commit_pos;
-
-        if (!plat_mem_commit(mem, commit_size)) {
-            return NULL;
-        }
-
-        arena->commit_pos = new_commit_pos;
-    }
+    if (new_pos > arena->capacity) { return NULL; }
 
     arena->pos = new_pos;
 
-    u8* out = (u8*)arena + pos_aligned;
-
-    if (!non_zero) {
-        memset(out, 0, size);
-    }
-
+    u64* out = (u64*)arena + aligned_pos;
     return out;
 }
 
-void arena_pop(mem_arena* arena, u64 size) {
-    if (size > arena->pos - ARENA_BASE_POS) {
-        size = arena->pos - ARENA_BASE_POS;
+void cpu_arena_pop(cpu_arena* arena, u64 size) {
+    if (size > arena->pos - CPU_ARENA_BASE_POS) {
+        size = arena->pos - CPU_ARENA_BASE_POS;
     }
     arena->pos -= size;
 }
 
-void arena_pop_to(mem_arena* arena, u64 new_pos) {
+void cpu_arena_pop_to(cpu_arena* arena, u64 new_pos) {
     u64 size = new_pos < arena->pos ? arena->pos - new_pos : 0;
     arena_pop(arena, size);
 }
 
 
-void arena_clear(mem_arena* arena) {
-    arena_pop_to(arena, ARENA_BASE_POS);
-}
-
-u32 plat_get_pagesize(void) {
-    return (u32)sysconf(_SC_PAGESIZE);
-}
-
-void* plat_mem_reserve(u64 size) {
-    void* out = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (out == MAP_FAILED) {
-        return NULL;
-    }
-    return out;
-}
-
-b32 plat_mem_commit(void* ptr, u64 size) {
-    i32 ret = mprotect(ptr, size, PROT_READ | PROT_WRITE);
-    return ret == 0;
-}
-
-b32 plat_mem_decommit(void* ptr, u64 size) {
-    i32 ret = mprotect(ptr, size, PROT_NONE);
-    if (ret != 0) { return false; }
-    ret = madvise(ptr, size, MADV_DONTNEED);
-    return ret == 0;
-}
-
-b32 plat_mem_release(void* ptr, u64 size) {
-    i32 ret = munmap(ptr, size);
-    return ret == 0;
+void cpu_arena_clear(cpu_arena* arena) {
+    arena_pop_to(arena, CPU_ARENA_BASE_POS);
 }

@@ -1,9 +1,16 @@
 // Part of this code was adapted from a video of "Magicalbat" YouTube channel
 // Video URL: "https://youtu.be/hL_n_GljC0I"
 // Original GitHub repo: "https://github.com/Magicalbat/videos/tree/main/machine-learning"
-
 #include "algebra.h"
-#include "../arena/arena-cpu.h"
+
+matrix* mat_create_cpu(u32 rows, u32 cols) {
+    matrix* mat = (matrix*)malloc(sizeof(matrix));
+    mat->rows = rows;
+    mat->cols = cols;
+    mat->device = CPU;
+    mat->data = (f32*)malloc(sizeof(f32) * rows * cols);
+    return mat;
+}
 
 void mat_fill_cpu(matrix* mat, f32 val) {
     u64 size = mat_elemnum(mat);
@@ -116,7 +123,9 @@ b32 mat_mul_cpu(
     if (a_cols != b_rows) { return false; }
     if (out->rows != a_rows || out->cols != b_cols) { return false; }
 
-    if (zero_out) { mat_clear(out); }
+    if (zero_out) { 
+        mat_clear(out); 
+    }
 
     u32 transpose = (transpose_a << 1) | transpose_b;
     switch (transpose) {
