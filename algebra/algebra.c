@@ -1,7 +1,3 @@
-// This is a unified API to connect CPU and GPU implemented code
-// Contains C wrappers for CPU and GPU code
-// Contains "CPU only" realizable code
-
 #include "algebra.h"
 
 matrix* mat_create(u32 rows, u32 cols, deviceType device) {
@@ -56,7 +52,6 @@ void mat_fill(matrix* mat, f32 val) {
 }
 
 b32 mat_add(matrix* out, const matrix* a, const matrix* b) {
-
     if (a->cols != b->cols || a->rows != b->rows) { return false; }
     if (out->cols != a->cols || out->rows != out->rows) { return false; }
 
@@ -72,7 +67,18 @@ b32 mat_add(matrix* out, const matrix* a, const matrix* b) {
 }
 
 b32 mat_sub(matrix* out, const matrix* a, const matrix* b) {
-    return true;
+    if (a->cols != b->cols || a->rows != b->rows) { return false; }
+    if (out->cols != a->cols || out->rows != out->rows) { return false; }
+
+    if (out->device == CPU && a->device == CPU && b->device == CPU) {
+        return mat_sub_cpu(out, a, b);
+    }
+    else if (out->device == GPU && a->device == GPU && b->device == GPU) {
+        return mat_sub_gpu(out, a, b);
+    }
+    else {
+        return false;
+    }
 }
 
 b32 mat_mul(matrix* out, const matrix* a, const matrix* b, b32 zero_out, b32 transpose_a, b32 transpose_b) {
@@ -87,10 +93,24 @@ b32 mat_mul(matrix* out, const matrix* a, const matrix* b, b32 zero_out, b32 tra
     }
 }
 
-void mat_scale(matrix* mat, f32 scale);
-f32 mat_sum(matrix* mat) {
-    return 1.0f;
+void mat_scale(matrix* mat, f32 scale) {
+    if (mat->device == GPU) {
+        mat_scale_gpu(mat, scale);
+    }
+    else if (mat->device == CPU) {
+        mat_scale_cpu(mat, scale);
+    }
 }
+
+f32 mat_sum(matrix* mat) {
+    if (mat->device == GPU) {
+        mat_sum_gpu(mat);
+    }
+    else if (mat->device == CPU) {
+        mat_sum_cpu(mat);
+    }
+}
+
 b32 mat_relu(matrix* out, const matrix* in) { return true; }
 b32 mat_softmax(matrix* out, const matrix* in) { return true; }
 b32 mat_cross_entropy(matrix* out, const matrix* p, const matrix* q) { return true; }

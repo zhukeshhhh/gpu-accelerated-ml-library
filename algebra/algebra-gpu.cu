@@ -1,8 +1,8 @@
 #include "algebra.h"
 #include "../arena/arena-gpu.h"
 
+#define TILE_SIZE 16
 
-// TODO: implement GPU WRAPPERS
 matrix* mat_create_gpu(u32 rows, u32 cols) {
     matrix* mat = (matrix*)malloc(sizeof(matrix));
     mat->rows = rows;
@@ -55,7 +55,7 @@ b32 mat_sub_gpu(matrix* out, const matrix* a, const matrix* b) {
 }
 
 b32 mat_mul_gpu(matrix* out, const matrix* a, const matrix* b, b32 zero_out, b32 transpose_a, b32 transpose_b) {
-    return true;
+    
 }
 
 void mat_scale_gpu(matrix* mat, f32 scale) {}
@@ -68,26 +68,61 @@ b32 mat_softmax_add_grad_gpu(matrix* out, const matrix* softmax_out) { return tr
 b32 mat_cross_entropy_add_grad_gpu(matrix* out, const matrix* p, const matrix* q) { return true; }
 
 
-// TODO: IMPLEMENT CUDA KERNELS
-__global__ void mat_add_kernel(float* out_data, const float* a_data, const float* b_data, u64 mat_size) {
+__global__ void mat_add_kernel(f32* out_data, const f32* a_data, const f32* b_data, u64 mat_size) {
     u64 tid = threadIdx.x + blockIdx.x * blockDim.x;
     if (tid < mat_size) {
         out_data[tid] = a_data[tid] + b_data[tid];
     }
 }
 
-__global__ void mat_sub_kernel(float* out_data, const float* a_data, const float* b_data, u64 mat_size) {
+__global__ void mat_sub_kernel(f32* out_data, const f32* a_data, const f32* b_data, u64 mat_size) {
     u64 tid = threadIdx.x + blockIdx.x * blockDim.x;
     if (tid < mat_size) {
         out_data[tid] = a_data[tid] - b_data[tid];
     }
 }
 
-__global__ void mat_mul_kernel(matrix* out, const matrix* a, const matrix* b) {
+__global__ void mat_mul_kernel(f32* out_data, const f32* a_data, const f32* b_data, u64 N, u64 M, u64 K) {
+    __shared__ f32 a_shared[TILE_SIZE][TILE_SIZE];
+    __shared__ f32 b_shared[TILE_SIZE][TILE_SIZE];
 
+    u64 by = blockIdx.y;
+    u64 bx = blockIdx.x;
+
+    u64 local_row = threadIdx.y;
+    u64 local_col = threadIdx.x;
+
+    u64 row = threadIdx.y + blockDim.y * blockIdx.y;
+    u64 col = threadIdx.x + blockDim.x * blockIdx.x;
+
+    f32 patrial_sum = 0.0f;
+    for (u64 phase = 0; phase < (K + TILE_SIZE - 1) / TILE_SIZE; phase++) {
+
+        if ((row < N) && (phase * TILE_SIZE + local_col) < K) {
+            a_shared[local_row][local_col] = a_data[row * K + phase * TILE_SIZE + local_col]; // constant row and changing col
+        }
+        else {
+            a_shared[local_row][local_col] = 0.0f;
+        }
+
+        if ((col < M) && (phase * TILE_SIZE + local_row) < K) {
+            b_shared[local_row][local_col] = b_data[(phase * TILE_SIZE + local_row) * K + col]; // constant col and changing row
+        }
+        else {
+            b_shared[local_row][local_col] = 0.0f;
+        }
+
+        __syncthreads();
+
+        for (u64 k = 0; k < TILE_SIZE; k++) {
+            patrial_sum += a_shared[local_row][k] * b_shared[k][local_col];
+        }
+        __syncthreads();
+    }
+    out_data[row * K + col] = patrial_sum;
 }
 
-__global__ void mat_fill_kernel(float* dst, f32 val, u64 mat_size) {
+__global__ void mat_fill_kernel(f32* dst, f32 val, u64 mat_size) {
     u64 tid = threadIdx.x + blockIdx.x * blockDim.x;
     if (tid < mat_size) {
         dst[tid] = val;

@@ -77,7 +77,6 @@ b32 mat_softmax_add_grad_gpu(matrix* out, const matrix* softmax_out);
 b32 mat_cross_entropy_add_grad_gpu(matrix* out, const matrix* p, const matrix* q);
 
 /*<====================CUDA KERNELS====================>*/
-// TODO: fix the parameters for each kernel
 #ifdef __CUDACC__
     __global__ void mat_add_kernel(float* out, const float* a, const float* b, u64 mat_size);
     __global__ void mat_sub_kernel(float* out, const float* a, const float* b, u64 mat_size);

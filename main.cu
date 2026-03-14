@@ -3,6 +3,10 @@
 #include "arena/arena-gpu.h"
 #include <cuda_runtime.h>
 
+// TODO: learn matrix coalesting for mat_mul
+// TODO: learn how to do matmul for transposed matrices
+// TODO: fix the parameters for each kernel
+// TODO: add error checking code
 
 int main(void) {
     matrix* a = mat_create(5, 5, GPU);
