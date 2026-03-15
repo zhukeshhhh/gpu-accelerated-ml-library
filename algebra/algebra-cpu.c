@@ -1,7 +1,9 @@
 // Part of this code was adapted from a video of "Magicalbat" YouTube channel
 // Video URL: "https://youtu.be/hL_n_GljC0I"
 // Original GitHub repo: "https://github.com/Magicalbat/videos/tree/main/machine-learning"
-#include "algebra.h"
+#include "../include/base.h"
+#include "../include/algebra.h"
+#include <math.h>
 
 matrix* mat_create_cpu(u32 rows, u32 cols) {
     matrix* mat = (matrix*)malloc(sizeof(matrix));

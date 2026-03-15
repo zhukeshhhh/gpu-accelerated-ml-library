@@ -8,9 +8,7 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-#include "../arena/arena-cpu.h"
-#include "../arena/arena-gpu.h"
-#include "../rand/rand.h"
+#include "base.h"
 
 typedef enum {
     CPU,
@@ -23,6 +21,13 @@ typedef struct {
     f32* data;
     deviceType device;
 } matrix;
+
+typedef enum {
+    NN,
+    NT,
+    TN,
+    TT
+} matmulTransposeCase;
 
 /*<====================CPU ONLY====================>*/
 size_t mat_size(matrix* mat);
@@ -67,6 +72,7 @@ b32 mat_add_gpu(matrix* out, const matrix* a, const matrix* b);
 b32 mat_sub_gpu(matrix* out, const matrix* a, const matrix* b);
 b32 mat_mul_gpu(matrix* out, const matrix* a, const matrix* b, b32 zero_out, b32 transpose_a, b32 transpose_b);
 void mat_fill_gpu(matrix* mat, f32 val);
+void mat_clear_gpu(matrix* mat);
 void mat_scale_gpu(matrix* mat, f32 scale);
 f32 mat_sum_gpu(matrix* mat);
 b32 mat_relu_gpu(matrix* out, const matrix* in);
@@ -80,7 +86,7 @@ b32 mat_cross_entropy_add_grad_gpu(matrix* out, const matrix* p, const matrix* q
 #ifdef __CUDACC__
     __global__ void mat_add_kernel(float* out, const float* a, const float* b, u64 mat_size);
     __global__ void mat_sub_kernel(float* out, const float* a, const float* b, u64 mat_size);
-    __global__ void mat_mul_kernel(matrix* out, const matrix* a, const matrix* b);
+    __global__ void mat_mul_kernel(f32* out_data, const f32* a_data, const f32* b_data, u64 N, u64 M, u64 K, matmulTransposeCase tcase);
     __global__ void mat_fill_kernel(float* dst, f32 val, u64 mat_size);
     __global__ void mat_scale_kernel(matrix* mat, f32 scale);
     __global__ void mat_sum_kernel(matrix* mat);

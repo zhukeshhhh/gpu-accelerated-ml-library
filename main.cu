@@ -1,6 +1,5 @@
-#include "algebra/algebra.h"
-#include "arena/arena-cpu.h"
-#include "arena/arena-gpu.h"
+#include "include/base.h"
+#include "include/algebra.h"
 #include <cuda_runtime.h>
 
 // TODO: learn matrix coalesting for mat_mul
@@ -9,16 +8,17 @@
 // TODO: add error checking code
 
 int main(void) {
-    matrix* a = mat_create(5, 5, GPU);
-    matrix* b = mat_create(5, 5, GPU);
-    matrix* c = mat_create(5, 5, GPU);
+    matrix* ad = mat_create(1000, 10, GPU);
+    matrix* bd = mat_create(1000, 10, GPU);
+    matrix* cd = mat_create(10, 10, GPU);
 
-    mat_fill(a, 1.0f);
-    mat_fill(b, 1.0f);
 
-    mat_add(c, a, b);
+    mat_fill(ad, 1.1f);
+    mat_fill(bd, 1.2f);
 
-    print_matrix(c);
+    if (mat_mul(cd, ad, bd, false, true, false) == true) {
+        print_matrix(cd);
+    }
 
     return 0;
 }
