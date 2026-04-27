@@ -1,6 +1,7 @@
 // Part of this code was adapted from a video of "Magicalbat" YouTube channel
 // Video URL: "https://youtu.be/hL_n_GljC0I"
 // Original GitHub repo: "https://github.com/Magicalbat/videos/tree/main/machine-learning"
+
 #include "../include/base.h"
 #include "../include/algebra.h"
 #include <math.h>
@@ -170,14 +171,20 @@ b32 mat_softmax_cpu(matrix* out, const matrix* in) {
 }
 
 b32 mat_cross_entropy_cpu(matrix* out, const matrix* p, const matrix* q) {
-    if (p->cols != q->cols || q->rows != p-> rows) { return false; }
-    if (out->cols != p->cols || out->rows != p->cols) { return false; }
+    if (p->rows != q->rows || p->cols != q->cols) { return false; }
+    if (out->rows != p->rows || out->cols != p->cols) { return false; }
 
     u64 size = mat_elemnum(out);
     for (u64 i = 0; i < size; i++) {
-        if (p->data[i] == 0.0f) { out->data[i] = 0.0f; }
-        else { out->data[i] = p->data[i] * -logf(q->data[i]); }
+        if (p->data[i] == 0.0f) {
+            out->data[i] = 0.0f;
+        }
+        else {
+            out->data[i] = p->data[i] * -logf(q->data[i]);
+        }
     }
+
+    return true;
 }
 
 

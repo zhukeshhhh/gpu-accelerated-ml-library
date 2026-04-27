@@ -8,17 +8,20 @@
 // TODO: add error checking code
 
 int main(void) {
-    matrix* ad = mat_create(1000, 10, GPU);
-    matrix* bd = mat_create(1000, 10, GPU);
-    matrix* cd = mat_create(10, 10, GPU);
+    matrix* ad = mat_create(100, 100, GPU);
+    matrix* bd = mat_create(100, 100, GPU);
+    matrix* sum_abd = mat_create(100, 100, GPU);
+    matrix* mul = mat_create(100, 100, GPU);
 
+    mat_fill(ad, 1.2f);
+    mat_fill(bd, 1.0f);
 
-    mat_fill(ad, 1.1f);
-    mat_fill(bd, 1.2f);
+    mat_add(sum_abd, ad, bd);
+    mat_mul(mul, ad, sum_abd, false, false, true);
 
-    if (mat_mul(cd, ad, bd, false, true, false) == true) {
-        print_matrix(cd);
-    }
+    printf("MULTIPLICATION COMPELED\n");
+    print_matrix(mul);
+    printf("SUM of FINAL matrix : %f\n", mat_sum(mul));
 
     return 0;
 }

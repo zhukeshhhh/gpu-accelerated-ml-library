@@ -35,8 +35,8 @@ void mat_fill_gpu(matrix* mat, f32 val) {
 }
 
 void mat_clear_gpu(matrix* mat) {
-    u64 size = mat_elemnum(mat);
-    cudaError_t err = cudaMemset(&mat, 0, size * sizeof(f32));
+    u64 mat_size = mat_elemnum(mat);
+    cudaError_t err = cudaMemset(&mat, 0, mat_size * sizeof(f32));
     if (err != cudaSuccess) {
         printf("mat_clear_gpu(): failed to clear the matrix on a GPU!\n");
         printf("CUDA Error: %s\n", cudaGetErrorString(err));
@@ -63,7 +63,7 @@ b32 mat_add_gpu(matrix* out, const matrix* a, const matrix* b) {
 }
 
 b32 mat_sub_gpu(matrix* out, const matrix* a, const matrix* b) {
-    u64 mat_size = out->cols * out->rows;
+    u64 mat_size = mat_elemnum(out);
     u64 threads = 256;
     u64 blocks = (mat_size + threads - 1) / threads;
     dim3 THREADS(threads);
@@ -126,11 +126,72 @@ b32 mat_mul_gpu(matrix* out, const matrix* a, const matrix* b, b32 zero_out, b32
     return true;
 }
 
-void mat_scale_gpu(matrix* mat, f32 scale) {}
-f32 mat_sum_gpu(matrix* mat) { return 1.0f; }
+void mat_scale_gpu(matrix* mat, f32 scale) {
+    u64 mat_size = mat_elemnum(mat);
+    u64 threads = 256;
+    u64 blocks = (mat_size + threads - 1) / threads;
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+    f32* mat_data = mat->data;
+    mat_scale_kernel<<<BLOCKS, THREADS>>>(mat_data, scale, mat_size);
+    cudaError_t err = cudaDeviceSynchronize();
+    if (err != cudaSuccess) {
+        printf("mat_sub_gpu(): failed to scale the matrix!\n");
+        printf("CUDA Error: %s\n", cudaGetErrorString(err));
+    }
+}
+
+f32 mat_sum_gpu(matrix* mat) {
+    u64 mat_size = mat_elemnum(mat);
+    f32* out;
+    cudaMallocManaged(&out, sizeof(f32));
+    u32 threads = 128;
+    mat_sum_kernel<<<1, threads, threads * sizeof(f32)>>>(mat->data, out, mat_size);
+    cudaError_t err = cudaDeviceSynchronize();
+    if (err != cudaSuccess) {
+        printf("mat_sum_gpu(): failed to sum the matrix!\n");
+        printf("CUDA Error: %s\n", cudaGetErrorString(err));
+    }
+    f32 result = *out;
+    cudaFree(out);
+    return result;
+}
+
 b32 mat_relu_gpu(matrix* out, const matrix* in) { return true; }
 b32 mat_softmax_gpu(matrix* out, const matrix* in) { return true; }
-b32 mat_cross_entropy_gpu(matrix* out, const matrix* p, const matrix* q) { return true; }
+
+__global__ void mat_cross_entropy_kernel(f32* out_data, const f32* p_data, const f32* q_data, u64 n) {
+    u64 tid = (u64)threadIdx.x + (u64)blockIdx.x * (u64)blockDim.x;
+    if (tid < n) {
+        f32 pv = p_data[tid];
+        f32 qv = q_data[tid];
+        if (pv == 0.0f) {
+            out_data[tid] = 0.0f;
+        }
+        else {
+            out_data[tid] = pv * -logf(qv);
+        }
+    }
+}
+
+b32 mat_cross_entropy_gpu(matrix* out, const matrix* p, const matrix* q) {
+    if (p->rows != q->rows || p->cols != q->cols) { return false; }
+    if (out->rows != p->rows || out->cols != p->cols) { return false; }
+
+    u64 n = mat_elemnum(out);
+    u64 threads = 256;
+    u64 blocks = (n + threads - 1) / threads;
+    dim3 THREADS((u32)threads);
+    dim3 BLOCKS((u32)blocks);
+    mat_cross_entropy_kernel<<<BLOCKS, THREADS>>>(out->data, p->data, q->data, n);
+    cudaError_t err = cudaDeviceSynchronize();
+    if (err != cudaSuccess) {
+        printf("mat_cross_entropy_gpu(): failed!\n");
+        printf("CUDA Error: %s\n", cudaGetErrorString(err));
+        return false;
+    }
+    return true;
+}
 b32 mat_relu_add_grad_gpu(matrix* out, const matrix* in) { return true; }
 b32 mat_softmax_add_grad_gpu(matrix* out, const matrix* softmax_out) { return true; }
 b32 mat_cross_entropy_add_grad_gpu(matrix* out, const matrix* p, const matrix* q) { return true; }
@@ -250,11 +311,37 @@ __global__ void mat_fill_kernel(f32* dst, f32 val, u64 mat_size) {
         dst[tid] = val;
     }
 }
-__global__ void mat_scale_kernel(matrix* mat, f32 scale);
-__global__ void mat_sum_kernel(matrix* mat);
+
+__global__ void mat_scale_kernel(f32* mat, f32 scale, u64 mat_size) {
+    u32 tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid < mat_size) {
+        mat[tid] += scale;
+    }
+}
+
+__global__ void mat_sum_kernel(f32* mat, f32* out, u64 N) {
+    u64 tid = threadIdx.x;
+    f32 sum = 0.0f;
+    for (u64 i = tid; i < N; i += blockDim.x) {
+        sum += mat[i];
+    }
+    extern __shared__ f32 sdata[];
+    sdata[tid] = sum;
+    __syncthreads();
+    for (u64 stride = blockDim.x / 2; stride > 0; stride /= 2) {
+        if (tid < stride) {
+            sdata[tid] += sdata[tid + stride];
+        }
+        __syncthreads();
+    }
+    if (tid == 0) {
+        *out = sdata[0];
+    }
+}
+
+
 __global__ void mat_relu_kernel(matrix* out, const matrix* in);
 __global__ void mat_softmax_kernel(matrix* out, const matrix* in);
-__global__ void mat_cross_entropy_kernel(matrix* out, const matrix* p, const matrix* q);
 __global__ void mat_relu_add_grad_kernel(matrix* out, const matrix* in);
 __global__ void mat_softmax_add_grad_kernel(matrix* out, const matrix* softmax_out);
 __global__ void mat_cross_entropy_add_grad_kernel(matrix* out, const matrix* p, const matrix* q);

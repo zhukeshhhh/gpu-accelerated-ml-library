@@ -137,10 +137,10 @@ void mat_scale(matrix* mat, f32 scale) {
 
 f32 mat_sum(matrix* mat) {
     if (mat->device == GPU) {
-        mat_sum_gpu(mat);
+        return mat_sum_gpu(mat);
     }
     else if (mat->device == CPU) {
-        mat_sum_cpu(mat);
+        return mat_sum_cpu(mat);
     }
     else {
         printf("mat_sum(): Matrix deviceType mismatch or not specified correctly!\n");
@@ -148,9 +148,53 @@ f32 mat_sum(matrix* mat) {
     }
 }
 
-b32 mat_relu(matrix* out, const matrix* in) { return true; }
-b32 mat_softmax(matrix* out, const matrix* in) { return true; }
-b32 mat_cross_entropy(matrix* out, const matrix* p, const matrix* q) { return true; }
+b32 mat_relu(matrix* out, const matrix* in) { 
+    if (in->device == GPU && out->device == GPU) {
+        return mat_relu_gpu(out, in);
+    }
+    else if (in->device == CPU && out->device == CPU) {
+        return mat_relu_cpu(out, in);
+    }
+    else {
+        printf("mat_relu(): Matrix deviceType mismatch or not specified correctly!\n");
+        return false;
+    }
+}
+
+b32 mat_softmax(matrix* out, const matrix* in) { 
+    if (in->device == GPU && out->device == GPU) {
+        return mat_softmax_gpu(out, in);
+    }
+    else if (in->device == CPU && out->device == CPU) {
+        return mat_softmax_cpu(out, in);
+    }
+    else {
+        printf("mat_softmax(): Matrix deviceType mismatch or not specified correctly!\n");
+        return false;
+    }     
+}
+
+b32 mat_cross_entropy(matrix* out, const matrix* p, const matrix* q) {
+    if (p->rows != q->rows || p->cols != q->cols) {
+        printf("mat_cross_entropy(): sizes of p and q differ!\n");
+        return false;
+    }
+    if (out->rows != p->rows || out->cols != p->cols) {
+        printf("mat_cross_entropy(): output size does not match p!\n");
+        return false;
+    }
+
+    if (out->device == CPU && p->device == CPU && q->device == CPU) {
+        return mat_cross_entropy_cpu(out, p, q);
+    }
+    else if (out->device == GPU && p->device == GPU && q->device == GPU) {
+        return mat_cross_entropy_gpu(out, p, q);
+    }
+    else {
+        printf("mat_cross_entropy(): Matrix deviceType mismatch or not specified correctly!\n");
+        return false;
+    }
+}
 b32 mat_relu_add_grad(matrix* out, const matrix* in) { return true; }
 b32 mat_softmax_add_grad(matrix* out, const matrix* softmax_out) { return true; }
 b32 mat_cross_entropy_add_grad(matrix* out, const matrix* p, const matrix* q) { return true; }
